@@ -1,0 +1,514 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "SEU_WEBHOOK_PATH_AQUI",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -1360,
+        -16
+      ],
+      "id": "bd114f3c-4010-423e-89e1-e40bee775756",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        736,
+        -272
+      ],
+      "id": "2bfb4918-ace1-4b58-99c1-3df10ca5ce9e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').item.json.body.entry[0].messaging[0].message.text }}",
+        "options": {
+          "systemMessage": "Você vai responder as perguntas com menos de 10 palavras, nada além disso"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        464,
+        0
+      ],
+      "id": "b6c15c5c-ab3c-4c05-8386-beae75b3649d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.instagram.com/v22.0/SEU_INSTAGRAM_ACCOUNT_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer SEU_TOKEN_DO_INSTAGRAM_AQUI"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "recipient.id",
+              "value": "={{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}"
+            },
+            {
+              "name": "message.text",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        816,
+        0
+      ],
+      "id": "a8e905de-94ab-4d23-b02e-0ff0b1dfefe1",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        256
+      ],
+      "id": "048ad890-b9bb-40fe-8827-46c1448806dd",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SEU_CREDENTIAL_ID_GEMINI",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}",
+        "sessionTTL": 86400,
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.6,
+      "position": [
+        576,
+        304
+      ],
+      "id": "cd9b307e-b60f-48ca-adc1-038643f64ac7",
+      "name": "Redis Chat Memory",
+      "credentials": {
+        "redis": {
+          "id": "SEU_CREDENTIAL_ID_REDIS",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a1f3c9d2-5b7e-4c1a-9e2f-1d3b5a7c9e01",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message?.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "b2e4d0a3-6c8f-4d2b-8f3a-2e4c6b8d0f12",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message?.is_echo === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -544,
+        0
+      ],
+      "id": "8ae500dd-eed4-4532-bc50-b4a01de0aa1a",
+      "name": "IF"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1a1b2c3-0001-4a11-9a01-000000000001",
+              "leftValue": "={{ $json.body.entry[0].messaging[0].message?.is_echo === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -880,
+        -16
+      ],
+      "id": "1fa6e5db-addd-450a-ae13-c66c5d7cdd67",
+      "name": "IF Eco"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "value",
+        "key": "=bot_sent:{{ $('Webhook').item.json.body.entry[0].messaging[0].recipient.id }}",
+        "keyType": "string",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        -272
+      ],
+      "id": "b6cfb5d4-be3c-4fa0-a559-6513d219789b",
+      "name": "Redis Get Bot Sent",
+      "credentials": {
+        "redis": {
+          "id": "SEU_CREDENTIAL_ID_REDIS",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1a1b2c3-0003-4a11-9a01-000000000003",
+              "leftValue": "={{ !!$json.value }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -224,
+        -272
+      ],
+      "id": "e759a312-9ad6-4659-bdb1-0d3c6b5cfc5e",
+      "name": "IF Foi Humano"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=pause:{{ $('Webhook').item.json.body.entry[0].messaging[0].recipient.id }}",
+        "value": "1",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 86400
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -240
+      ],
+      "id": "d838fc36-3b93-4481-808e-41167ad1690b",
+      "name": "Redis Set Pause",
+      "credentials": {
+        "redis": {
+          "id": "SEU_CREDENTIAL_ID_REDIS",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "value",
+        "key": "=pause:{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}",
+        "keyType": "string",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -16
+      ],
+      "id": "14ab9662-9303-4547-80d5-a01125ee3493",
+      "name": "Redis Get Pause",
+      "credentials": {
+        "redis": {
+          "id": "SEU_CREDENTIAL_ID_REDIS",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1a1b2c3-0006-4a11-9a01-000000000006",
+              "leftValue": "={{ !!$json.value }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -96,
+        -16
+      ],
+      "id": "e069c7c6-3e78-4b87-9ebe-7c9b94e7813d",
+      "name": "IF Pausado"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=bot_sent:{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}",
+        "value": "1",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 30
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        176,
+        0
+      ],
+      "id": "8af948e5-dc8f-4b93-9930-62099b2761dc",
+      "name": "Redis Set Bot Sent",
+      "credentials": {
+        "redis": {
+          "id": "SEU_CREDENTIAL_ID_REDIS",
+          "name": "Redis account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "IF Eco",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "Redis Get Pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Eco": {
+      "main": [
+        [
+          {
+            "node": "Redis Get Bot Sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Get Bot Sent": {
+      "main": [
+        [
+          {
+            "node": "IF Foi Humano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Foi Humano": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Redis Set Pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Get Pause": {
+      "main": [
+        [
+          {
+            "node": "IF Pausado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Pausado": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Redis Set Bot Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Set Bot Sent": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}
